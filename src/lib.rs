@@ -27,39 +27,38 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[OsString]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not Enough Arguments: \n Please use a -- <SearchTerm> <File>");
-        }
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        args.next();
+
+        let query = match args.next() {
+            Some(arg) => arg.into(),
+            None => return Err("No Query String Found"),
+        };
+        let file_path = match args.next() {
+            Some(arg) => arg.into(),
+            None => return Err("Did not get a file path"),
+        };
 
         Ok(Config {
-            query: args[1].clone(),
-            file_path: args[2].clone(),
+            query,
+            file_path,
             ignore_case: env::var("IGNORE_CASE").is_ok(),
         })
     }
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut grep_vec: Vec<&'a str> = Vec::new();
-    for line in contents.lines() {
-        if line.contains(query) {
-            grep_vec.push(line);
-        }
-    }
-    grep_vec
+    contents
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
 
 pub fn insensitive_search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut in_grep_vec: Vec<&'a str> = Vec::new();
-    let search_term = query.to_lowercase();
-
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&search_term) {
-            in_grep_vec.push(line)
-        }
-    }
-    in_grep_vec
+    contents
+        .lines()
+        .filter(|x| x.to_lowercase().contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
